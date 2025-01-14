@@ -96,10 +96,26 @@ Run the following command in your terminal (replace placeholders):
 curl -F "url=<web-app-url>" https://api.telegram.org/bot<bot-token>/setWebhook
 ```
 
+or access this endpoint from browser:
+
+```bash
+https://api.telegram.org/bot<bot-token>/setWebhook?url=<web-app-url>
+```
+
 Explain:
 
 -   `<web-app-url>`: The deployment URL of your Apps Script.
 -   `<bot-token>`: Your Telegram bot token.
+
+Check if you get this response:
+
+```json
+{
+    "ok": true,
+    "result": true,
+    "description": "Webhook was set"
+}
+```
 
 You can verify the webhook setup with:
 
