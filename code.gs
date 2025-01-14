@@ -24,7 +24,7 @@ function doPost(e) {
 
         // Save to Google Sheets
         var sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
-        sheet.appendRow([new Date(), amount, category, note]);
+        sheet.appendRow([formatDate(new Date()), amount, category, note]);
 
         // Send back success message
         sendMessage(
@@ -53,5 +53,15 @@ function sendMessage(chatId, text) {
     };
 
     UrlFetchApp.fetch(url, options);
+}
+
+function formatDate(date) {
+    var options = {
+        weekday: "short",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    };
+    return date.toLocaleDateString("en-US", options);
 }
 
