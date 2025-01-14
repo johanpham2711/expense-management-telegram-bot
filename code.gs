@@ -77,15 +77,30 @@ function formatDate(date) {
 }
 
 function parseAmount(amount) {
-    if (amount.toLowerCase().includes("k")) {
-        return parseInt(amount.replace("k", "")) * 1000;
-    } else if (amount.toLowerCase().includes("tr")) {
-        return parseInt(amount.replace("tr", "")) * 1000000;
-    } else if (amount.toLowerCase().includes("t")) {
-        return parseInt(amount.replace("t", "")) * 1000000000;
-    } else {
-        return parseInt(amount);
+    var regex = /^(\d+)(k|tr|t)?(\d+)?$/i; // Match main number, optional unit, and optional decimals
+    var match = regex.exec(amount);
+
+    if (!match) {
+        return NaN; // Return NaN for invalid input
     }
+
+    var mainNumber = parseInt(match[1], 10);
+    var unit = match[2] ? match[2].toLowerCase() : "";
+    var decimals = match[3] ? parseInt(match[3], 10) : 0;
+
+    var multiplier = {
+        k: 1000,
+        tr: 1000000,
+        t: 1000000000,
+    };
+
+    // Calculate the total value
+    var mainValue = mainNumber * (multiplier[unit] || 1);
+    var decimalValue =
+        (decimals * (multiplier[unit] || 1)) /
+        Math.pow(10, decimals.toString().length);
+
+    return mainValue + decimalValue;
 }
 
 function getCategories() {
