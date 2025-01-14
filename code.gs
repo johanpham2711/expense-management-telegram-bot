@@ -13,6 +13,17 @@ function doPost(e) {
     var chatId = message.chat.id;
     var text = message.text;
 
+    // Check the command "/chi"
+    if (text.startsWith("/chi ")) {
+        var categories = getCategories();
+        sendMessage(
+            chatId,
+            `Please select category:\n${categories
+                .map((c, i) => `${i + 1}. ${c}`)
+                .join("\n")}`
+        );
+    }
+
     // Check the message context
     var regex = /^\/chi\s+(\S+)\s+(\d+|\D+)\s*(.*)$/i;
     var match = text.match(regex);
@@ -75,5 +86,11 @@ function parseAmount(amount) {
     } else {
         return parseInt(amount);
     }
+}
+
+function getCategories() {
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet2");
+    var categoriesRange = sheet.getRange("E3:E14");
+    return categoriesRange.getValues().flat().filter(String);
 }
 
