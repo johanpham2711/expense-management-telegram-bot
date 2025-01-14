@@ -23,7 +23,7 @@ function doPost(e) {
         var note = match[3] || "";
 
         // Save to Google Sheets
-        var sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
+        var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet1");
         sheet.appendRow([formatDate(new Date()), amount, category, note]);
 
         // Send back success message
