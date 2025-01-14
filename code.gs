@@ -42,12 +42,16 @@ function doPost(e) {
 function sendMessage(chatId, text) {
     var url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     var payload = {
-        method: "post",
-        payload: {
-            chat_id: chatId,
-            text: text,
-        },
+        chat_id: chatId,
+        text: text,
     };
-    UrlFetchApp.fetch(url, payload);
+
+    var options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+    };
+
+    UrlFetchApp.fetch(url, options);
 }
 
