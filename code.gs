@@ -14,11 +14,11 @@ function doPost(e) {
     var text = message.text;
 
     // Check the message context
-    var regex = /^\/chi\s+(\d+)\s+(\S+)\s*(.*)$/i;
+    var regex = /^\/chi\s+(\S+)\s+(\d+|\D+)\s*(.*)$/i;
     var match = text.match(regex);
 
     if (match) {
-        var amount = match[1];
+        var amount = parseAmount(match[1]);
         var category = match[2];
         var note = match[3] || "";
 
@@ -63,5 +63,17 @@ function formatDate(date) {
         day: "2-digit",
     };
     return date.toLocaleDateString("en-US", options);
+}
+
+function parseAmount(amount) {
+    if (amount.toLowerCase().includes("k")) {
+        return parseInt(amount.replace("k", "")) * 1000;
+    } else if (amount.toLowerCase().includes("tr")) {
+        return parseInt(amount.replace("tr", "")) * 1000000;
+    } else if (amount.toLowerCase().includes("t")) {
+        return parseInt(amount.replace("t", "")) * 1000000000;
+    } else {
+        return parseInt(amount);
+    }
 }
 
