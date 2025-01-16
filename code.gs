@@ -1,52 +1,80 @@
 var sheetId = "YOUR_SHEET_ID_HERE"; //Update YOUR_SHEET_ID_HERE by ID of Google Sheet
 var botToken = "YOUR_BOT_TOKEN_HERE"; //Update YOUR_BOT_TOKEN_HERE by Token Telegram Bot
 var lastUpdateId;
+var pendingTransactions = []; // To track transactions awaiting category selection
 
 function doPost(e) {
     var update = JSON.parse(e.postData.contents);
 
-    // Check the new update
+    // Check if it's a duplicate update
     if (lastUpdateId == update.update_id) return;
     lastUpdateId = update.update_id;
 
-    var message = update.message;
-    var chatId = message.chat.id;
-    var text = message.text;
-
-    // Check the command "/chi"
-    if (text.startsWith("/chi ")) {
-        var categories = getCategories();
-        sendMessage(
-            chatId,
-            `Please select category:\n${categories
-                .map((c, i) => `${i + 1}. ${c}`)
-                .join("\n")}`
-        );
+    // Check if it's a callback query (for category selection)
+    if (update.callback_query) {
+        handleCallbackQuery(update.callback_query);
+        return;
     }
 
-    // Check the message context
-    var regex = /^\/chi\s+(\S+)\s+(\d+|\D+)\s*(.*)$/i;
+    var message = update.message;
+    if (!message || !message.text) return;
+
+    var chatId = message.chat.id;
+    var text = message.text.trim();
+
+    // Check the "/chi <amount>-<details>" command
+    var regex = /^\/chi\s+(\S+)-(.*)$/i;
     var match = text.match(regex);
 
     if (match) {
         var amount = parseAmount(match[1]);
-        var category = match[2];
-        var note = match[3] || "";
+        var details = match[2].trim();
 
-        // Save to Google Sheets
-        var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet1");
-        sheet.appendRow([formatDate(new Date()), amount, category, note]);
+        if (isNaN(amount)) {
+            sendMessage(
+                chatId,
+                "❌ Invalid amount format! Example: /chi 50k-Dinner"
+            );
+            return;
+        }
 
-        // Send back success message
-        sendMessage(
-            chatId,
-            `✅ Saved: \n- Amount: ${amount} \n- Category: ${category} \n- Note: ${note}`
-        );
+        // Store the transaction data temporarily
+        pendingTransactions.push({ amount: amount, details: details });
+
+        // Send category selection menu
+        var categories = getCategories();
+        sendInlineKeyboard(chatId, "Please select a category:", categories);
     } else {
         sendMessage(
             chatId,
-            "❌ Wrong syntax! Please use: \n/chi <amount> <category> [note]"
+            "❌ Wrong syntax! Please use: /chi <amount>-<details>"
         );
+    }
+}
+
+function handleCallbackQuery(callbackQuery) {
+    var chatId = callbackQuery.message.chat.id;
+    var category = callbackQuery.data; // The selected category
+
+    // Check if there's a pending transaction for this user
+    var pendingTransaction = pendingTransactions.pop();
+    if (pendingTransaction) {
+        // Save to Google Sheets
+        var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet1");
+        sheet.appendRow([
+            formatDate(new Date()),
+            pendingTransaction.amount,
+            category,
+            pendingTransaction.details,
+        ]);
+
+        // Send success message
+        sendMessage(
+            chatId,
+            `✅ Transaction saved:\n- Amount: ${pendingTransaction.amount}\n- Category: ${category}\n- Details: ${pendingTransaction.details}`
+        );
+    } else {
+        sendMessage(chatId, "❌ No pending transaction found.");
     }
 }
 
@@ -55,6 +83,27 @@ function sendMessage(chatId, text) {
     var payload = {
         chat_id: chatId,
         text: text,
+    };
+
+    var options = {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+    };
+
+    UrlFetchApp.fetch(url, options);
+}
+
+function sendInlineKeyboard(chatId, text, categories) {
+    var url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    var inlineKeyboard = categories.map((category) => [
+        { text: category, callback_data: category },
+    ]);
+
+    var payload = {
+        chat_id: chatId,
+        text: text,
+        reply_markup: JSON.stringify({ inline_keyboard: inlineKeyboard }),
     };
 
     var options = {
@@ -77,7 +126,7 @@ function formatDate(date) {
 }
 
 function parseAmount(amount) {
-    var regex = /^(\d+)(k|tr|t)?(\d+)?$/i; // Match main number, optional unit, and optional decimals
+    var regex = /^([0-9]+)(k|tr|t)?([0-9]*)?$/i; // Match main number, optional unit, and optional decimals
     var match = regex.exec(amount);
 
     if (!match) {
