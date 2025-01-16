@@ -1,7 +1,10 @@
 var sheetId = "YOUR_SHEET_ID_HERE"; //Update YOUR_SHEET_ID_HERE by ID of Google Sheet
 var botToken = "YOUR_BOT_TOKEN_HERE"; //Update YOUR_BOT_TOKEN_HERE by Token Telegram Bot
 var lastUpdateId;
-var pendingTransactions = []; // To track transactions awaiting category selection
+var expenseSheet = "Expense";
+var tempExpenseSheet = "TempExpense";
+var categoryListSheet = "Category List";
+var categoriesPosition = "A1:A";
 
 function doPost(e) {
     var update = JSON.parse(e.postData.contents);
@@ -38,8 +41,8 @@ function doPost(e) {
             return;
         }
 
-        // Store the transaction data temporarily
-        pendingTransactions.push({ amount: amount, details: details });
+        // Store the transaction data temporarily in a temporary sheet
+        storePendingTransaction(chatId, amount, details);
 
         // Send category selection menu
         var categories = getCategories();
@@ -56,11 +59,12 @@ function handleCallbackQuery(callbackQuery) {
     var chatId = callbackQuery.message.chat.id;
     var category = callbackQuery.data; // The selected category
 
-    // Check if there's a pending transaction for this user
-    var pendingTransaction = pendingTransactions.pop();
+    // Retrieve the pending transaction for this user
+    var pendingTransaction = retrievePendingTransaction(chatId);
     if (pendingTransaction) {
         // Save to Google Sheets
-        var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet1");
+        var sheet =
+            SpreadsheetApp.openById(sheetId).getSheetByName(expenseSheet);
         sheet.appendRow([
             formatDate(new Date()),
             pendingTransaction.amount,
@@ -71,11 +75,45 @@ function handleCallbackQuery(callbackQuery) {
         // Send success message
         sendMessage(
             chatId,
-            `✅ Transaction saved:\n- Amount: ${pendingTransaction.amount}\n- Category: ${category}\n- Details: ${pendingTransaction.details}`
+            `✅ Transaction saved:\n- Amount: ${pendingTransaction.amount} đ\n- Category: ${category}\n- Details: ${pendingTransaction.details}`
         );
     } else {
         sendMessage(chatId, "❌ No pending transaction found.");
     }
+}
+
+function storePendingTransaction(chatId, amount, details) {
+    var tempSheet = getTempSheet();
+    tempSheet.appendRow([chatId, amount, details]);
+}
+
+function retrievePendingTransaction(chatId) {
+    var tempSheet = getTempSheet();
+    var data = tempSheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+        if (data[i][0] == chatId) {
+            // Remove the row and return the transaction
+            tempSheet.deleteRow(i + 1); // Add 1 because rows are 1-indexed
+            return {
+                amount: data[i][1],
+                details: data[i][2],
+            };
+        }
+    }
+    return null; // No transaction found
+}
+
+function getTempSheet() {
+    var spreadsheet = SpreadsheetApp.openById(sheetId);
+    var tempSheet = spreadsheet.getSheetByName(tempExpenseSheet);
+
+    // Create the sheet if it doesn't exist
+    if (!tempSheet) {
+        tempSheet = spreadsheet.insertSheet(tempExpenseSheet);
+        tempSheet.appendRow(["ChatId", "Amount", "Details"]); // Add headers
+    }
+    return tempSheet;
 }
 
 function sendMessage(chatId, text) {
@@ -153,8 +191,9 @@ function parseAmount(amount) {
 }
 
 function getCategories() {
-    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName("Sheet2");
-    var categoriesRange = sheet.getRange("E3:E14");
+    var sheet =
+        SpreadsheetApp.openById(sheetId).getSheetByName(categoryListSheet);
+    var categoriesRange = sheet.getRange(categoriesPosition);
     return categoriesRange.getValues().flat().filter(String);
 }
 
