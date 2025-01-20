@@ -168,7 +168,7 @@ function formatDate(date) {
         month: "2-digit",
         day: "2-digit",
     };
-    return date.toLocaleDateString("en-GB", options);
+    return date.toLocaleDateString("en-US", options);
 }
 
 function parseAmount(amount) {
