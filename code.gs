@@ -33,8 +33,8 @@ function doPost(e) {
 
     var text = message.text.trim();
 
-    // Check the "/chi <amount>-<details>" command
-    var regex = /^\/chi\s+(\S+)-(.*)$/i;
+    // Check the "/out <amount>-<details>" command
+    var regex = /^\/out\s+(\S+)-(.*)$/i;
     var match = text.match(regex);
 
     if (match) {
@@ -44,7 +44,7 @@ function doPost(e) {
         if (isNaN(amount)) {
             sendMessage(
                 chatId,
-                "❌ Invalid amount format! Example: /chi 50k-Dinner"
+                "❌ Invalid amount format! Example: /out 50k-Dinner"
             );
             return;
         }
@@ -58,7 +58,7 @@ function doPost(e) {
     } else {
         sendMessage(
             chatId,
-            "❌ Wrong syntax! Please use: /chi <amount>-<details>"
+            "❌ Wrong syntax! Please use: /out <amount>-<details>"
         );
     }
 }
