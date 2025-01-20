@@ -7,6 +7,11 @@ var tempExpenseSheet = "TempExpense";
 var categoryListSheet = "Category List";
 var categoriesPosition = "A1:A";
 
+var transactionType = {
+    cashIn: "Cash In",
+    cashOut: "Cash Out",
+};
+
 function doPost(e) {
     var update = JSON.parse(e.postData.contents);
 
@@ -33,11 +38,17 @@ function doPost(e) {
 
     var text = message.text.trim();
 
+    // Check the "/in <amount>-<details>" command
+    var cashInRegex = /^\/in\s+(\S+)-(.*)$/i;
+    var cashInMatch = text.match(cashInRegex);
+
     // Check the "/out <amount>-<details>" command
     var cashOutRegex = /^\/out\s+(\S+)-(.*)$/i;
     var cashOutMatch = text.match(cashOutRegex);
 
-    if (cashOutMatch) {
+    if (cashInMatch) {
+        handleCashInTransaction(chatId, cashInMatch);
+    } else if (cashOutMatch) {
         handleCashOutTransaction(chatId, cashOutMatch);
     } else {
         sendMessage(
@@ -45,6 +56,26 @@ function doPost(e) {
             "❌ Wrong syntax! Please use:\n/in <amount>-<details>\nor\n/out <amount>-<details>"
         );
     }
+}
+
+function handleCashInTransaction(chatId, cashInMatch) {
+    var amount = parseAmount(cashInMatch[1]);
+    var details = cashInMatch[2].trim();
+
+    if (isNaN(amount)) {
+        sendMessage(
+            chatId,
+            "❌ Invalid amount format! Example: /in 50k-Dinner"
+        );
+        return;
+    }
+
+    // Store the transaction data temporarily in a temporary sheet
+    storePendingTransaction(chatId, transactionType.cashIn, amount, details);
+
+    // Send category selection menu
+    var categories = getCategories();
+    sendInlineKeyboard(chatId, "Please select a category:", categories);
 }
 
 function handleCashOutTransaction(chatId, cashOutMatch) {
@@ -60,7 +91,7 @@ function handleCashOutTransaction(chatId, cashOutMatch) {
     }
 
     // Store the transaction data temporarily in a temporary sheet
-    storePendingTransaction(chatId, amount, details);
+    storePendingTransaction(chatId, transactionType.cashOut, amount, details);
 
     // Send category selection menu
     var categories = getCategories();
@@ -77,26 +108,55 @@ function handleCallbackQuery(callbackQuery) {
         // Save to Google Sheets
         var sheet =
             SpreadsheetApp.openById(sheetId).getSheetByName(expenseSheet);
-        sheet.appendRow([
-            formatDate(new Date()),
-            pendingTransaction.amount,
-            category,
-            pendingTransaction.details,
-        ]);
+        if (pendingTransaction.type === transactionType.cashIn) {
+            sheet.appendRow([
+                formatDate(new Date()),
+                pendingTransaction.amount,
+                null,
+                category,
+                pendingTransaction.details,
+            ]);
 
-        // Send success message
-        sendMessage(
-            chatId,
-            `✅ Transaction saved:\n- Amount: ${pendingTransaction.amount} đ\n- Category: ${category}\n- Details: ${pendingTransaction.details}`
-        );
+            // Send success message
+            sendMessage(
+                chatId,
+                `✅ Transaction saved:\n- Type: ${
+                    pendingTransaction.type
+                } 📥\n- Amount: ${formatAmount(
+                    pendingTransaction.amount
+                )}đ\n- Category: ${category}\n- Details: ${
+                    pendingTransaction.details
+                }`
+            );
+        } else {
+            sheet.appendRow([
+                formatDate(new Date()),
+                null,
+                pendingTransaction.amount,
+                category,
+                pendingTransaction.details,
+            ]);
+
+            // Send success message
+            sendMessage(
+                chatId,
+                `✅ Transaction saved:\n- Type: ${
+                    pendingTransaction.type
+                } 📤\n- Amount: ${formatAmount(
+                    pendingTransaction.amount
+                )}đ\n- Category: ${category}\n- Details: ${
+                    pendingTransaction.details
+                }`
+            );
+        }
     } else {
         sendMessage(chatId, "❌ No pending transaction found.");
     }
 }
 
-function storePendingTransaction(chatId, amount, details) {
+function storePendingTransaction(chatId, type, amount, details) {
     var tempSheet = getTempSheet();
-    tempSheet.appendRow([chatId, amount, details]);
+    tempSheet.appendRow([chatId, type, amount, details]);
 }
 
 function retrievePendingTransaction(chatId) {
@@ -108,8 +168,9 @@ function retrievePendingTransaction(chatId) {
             // Remove the row and return the transaction
             tempSheet.deleteRow(i + 1); // Add 1 because rows are 1-indexed
             return {
-                amount: data[i][1],
-                details: data[i][2],
+                type: data[i][1],
+                amount: data[i][2],
+                details: data[i][3],
             };
         }
     }
@@ -123,7 +184,7 @@ function getTempSheet() {
     // Create the sheet if it doesn't exist
     if (!tempSheet) {
         tempSheet = spreadsheet.insertSheet(tempExpenseSheet);
-        tempSheet.appendRow(["ChatId", "Amount", "Details"]); // Add headers
+        tempSheet.appendRow(["ChatId", "Type", "Amount", "Details"]); // Add headers
     }
     return tempSheet;
 }
@@ -200,6 +261,10 @@ function parseAmount(amount) {
         Math.pow(10, decimals.toString().length);
 
     return mainValue + decimalValue;
+}
+
+function formatAmount(amount) {
+    return amount.toLocaleString("en-US");
 }
 
 function getCategories() {
