@@ -34,33 +34,37 @@ function doPost(e) {
     var text = message.text.trim();
 
     // Check the "/out <amount>-<details>" command
-    var regex = /^\/out\s+(\S+)-(.*)$/i;
-    var match = text.match(regex);
+    var cashOutRegex = /^\/out\s+(\S+)-(.*)$/i;
+    var cashOutMatch = text.match(cashOutRegex);
 
-    if (match) {
-        var amount = parseAmount(match[1]);
-        var details = match[2].trim();
-
-        if (isNaN(amount)) {
-            sendMessage(
-                chatId,
-                "❌ Invalid amount format! Example: /out 50k-Dinner"
-            );
-            return;
-        }
-
-        // Store the transaction data temporarily in a temporary sheet
-        storePendingTransaction(chatId, amount, details);
-
-        // Send category selection menu
-        var categories = getCategories();
-        sendInlineKeyboard(chatId, "Please select a category:", categories);
+    if (cashOutMatch) {
+        handleCashOutTransaction(chatId, cashOutMatch);
     } else {
         sendMessage(
             chatId,
-            "❌ Wrong syntax! Please use: /out <amount>-<details>"
+            "❌ Wrong syntax! Please use:\n/in <amount>-<details>\nor\n/out <amount>-<details>"
         );
     }
+}
+
+function handleCashOutTransaction(chatId, cashOutMatch) {
+    var amount = parseAmount(cashOutMatch[1]);
+    var details = cashOutMatch[2].trim();
+
+    if (isNaN(amount)) {
+        sendMessage(
+            chatId,
+            "❌ Invalid amount format! Example: /out 50k-Dinner"
+        );
+        return;
+    }
+
+    // Store the transaction data temporarily in a temporary sheet
+    storePendingTransaction(chatId, amount, details);
+
+    // Send category selection menu
+    var categories = getCategories();
+    sendInlineKeyboard(chatId, "Please select a category:", categories);
 }
 
 function handleCallbackQuery(callbackQuery) {
