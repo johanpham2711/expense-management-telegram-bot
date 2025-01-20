@@ -1,6 +1,6 @@
 var sheetId = "YOUR_SHEET_ID_HERE"; //Update YOUR_SHEET_ID_HERE by ID of Google Sheet
 var botToken = "YOUR_BOT_TOKEN_HERE"; //Update YOUR_BOT_TOKEN_HERE by Token Telegram Bot
-var allowedUserId = 123456789; // Replace with your Telegram user ID
+var allowedUserIds = [123456789]; // Replace with your Telegram user ID
 var lastUpdateId;
 var expenseSheet = "Expense";
 var tempExpenseSheet = "TempExpense";
@@ -26,7 +26,7 @@ function doPost(e) {
     var chatId = message.chat.id;
 
     // Check if the message is from your Telegram account
-    if (chatId !== allowedUserId) {
+    if (!allowedUserIds.includes(chatId)) {
         sendMessage(chatId, "❌ You are not authorized to use this bot.");
         return; // Ignore messages from anyone else
     }
