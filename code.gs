@@ -6,6 +6,7 @@ var expenseSheet = "Expense";
 var tempExpenseSheet = "TempExpense";
 var categoryListSheet = "Category List";
 var categoriesPosition = "A1:A";
+var balancePosition = "I3";
 
 var transactionType = {
     cashIn: "Cash In",
@@ -117,6 +118,10 @@ function handleCallbackQuery(callbackQuery) {
                 pendingTransaction.details,
             ]);
 
+            // Get balance
+            var balance = getBalance();
+            var formattedBalance = formatAmount(balance);
+
             // Send success message
             sendMessage(
                 chatId,
@@ -126,7 +131,7 @@ function handleCallbackQuery(callbackQuery) {
                     pendingTransaction.amount
                 )}đ\n- Category: ${category}\n- Details: ${
                     pendingTransaction.details
-                }`
+                }\n- Balance: ${formattedBalance}đ`
             );
         } else {
             sheet.appendRow([
@@ -137,6 +142,10 @@ function handleCallbackQuery(callbackQuery) {
                 pendingTransaction.details,
             ]);
 
+            // Get balance
+            var balance = getBalance();
+            var formattedBalance = formatAmount(balance);
+
             // Send success message
             sendMessage(
                 chatId,
@@ -146,7 +155,7 @@ function handleCallbackQuery(callbackQuery) {
                     pendingTransaction.amount
                 )}đ\n- Category: ${category}\n- Details: ${
                     pendingTransaction.details
-                }`
+                }\n- Balance: ${formattedBalance}đ`
             );
         }
     } else {
@@ -272,5 +281,12 @@ function getCategories() {
         SpreadsheetApp.openById(sheetId).getSheetByName(categoryListSheet);
     var categoriesRange = sheet.getRange(categoriesPosition);
     return categoriesRange.getValues().flat().filter(String);
+}
+
+function getBalance() {
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName(expenseSheet);
+    var balanceCell = sheet.getRange(balancePosition);
+    var balance = balanceCell.getValue();
+    return balance;
 }
 
