@@ -6,6 +6,8 @@ var expenseSheet = "Expense";
 var tempExpenseSheet = "TempExpense";
 var categoryListSheet = "Category List";
 var categoriesPosition = "A1:A";
+var totalCashInPosition = "G3";
+var totalCashOutPosition = "H3";
 var balancePosition = "I3";
 
 var transactionType = {
@@ -51,6 +53,8 @@ function doPost(e) {
         handleCashInTransaction(chatId, cashInMatch);
     } else if (cashOutMatch) {
         handleCashOutTransaction(chatId, cashOutMatch);
+    } else if (text === "/report") {
+        handleReport(chatId);
     } else {
         sendMessage(
             chatId,
@@ -97,6 +101,22 @@ function handleCashOutTransaction(chatId, cashOutMatch) {
     // Send category selection menu
     var categories = getCategories();
     sendInlineKeyboard(chatId, "Please select a category:", categories);
+}
+
+function handleReport(chatId) {
+    var totalCashIn = getTotalCashIn();
+    var totalCashOut = getTotalCashOut();
+    var balance = getBalance();
+
+    // Send success message
+    sendMessage(
+        chatId,
+        `🧾 Report:\n- Total cash in 💵: ${formatAmount(
+            totalCashIn
+        )}đ\n- Total cash out 💴: ${formatAmount(
+            totalCashOut
+        )}đ\n- Balance 💰: ${formatAmount(balance)}đ`
+    );
 }
 
 function handleCallbackQuery(callbackQuery) {
@@ -281,6 +301,20 @@ function getCategories() {
         SpreadsheetApp.openById(sheetId).getSheetByName(categoryListSheet);
     var categoriesRange = sheet.getRange(categoriesPosition);
     return categoriesRange.getValues().flat().filter(String);
+}
+
+function getTotalCashIn() {
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName(expenseSheet);
+    var totalCashInCell = sheet.getRange(totalCashInPosition);
+    var totalCashIn = totalCashInCell.getValue();
+    return totalCashIn;
+}
+
+function getTotalCashOut() {
+    var sheet = SpreadsheetApp.openById(sheetId).getSheetByName(expenseSheet);
+    var totalCashOutCell = sheet.getRange(totalCashOutPosition);
+    var totalCashOut = totalCashOutCell.getValue();
+    return totalCashOut;
 }
 
 function getBalance() {
